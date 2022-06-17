@@ -1,6 +1,8 @@
 import discord
+import os
 from discord.ext import commands
-import StatBot_token as BotToken
+
+TOKEN = os.getenv("DISCORD_TOKEN")
 
 bot = commands.Bot(
   case_insensitive = True,
@@ -218,7 +220,7 @@ bot.add_cog(Stat_Commands())
 # Run the bot #
 ###############
 
-bot.run(BotToken.TOKEN)
+bot.run(TOKEN)
 
 #TODO: Take account space in username. username argument only takes nonspace strings (MW, VANGUARD, WARZONE)
 #TODO: lolstat and tftstat needs region argument
