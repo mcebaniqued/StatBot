@@ -1,0 +1,3 @@
+git+https://github.com/mcebaniqued/StatBot
+PyNaCl==1.3.0
+dnspython==1.16.0
