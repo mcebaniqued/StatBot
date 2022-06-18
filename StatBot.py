@@ -22,7 +22,10 @@ async def on_ready():
 @bot.event
 async def on_command_error(ctx, error):
   if isinstance(error, commands.MissingRequiredArgument):
-    await ctx.send('Please put required arguments! For more help, type `$help <command>` or `$commandlist`')
+    await ctx.send(
+    f'''Correct usage: {ctx.prefix}{ctx.command.name} {ctx.command.signature}
+    For more help, type `$help {ctx.command.name}` or `$commandlist`'''
+    )
   #await bot.process_commands(message)
 
 ############
@@ -40,22 +43,23 @@ class Help_Commands(commands.Cog, name = 'Help Commands'):
   @commands.command(
     aliases = ['commands'],
     brief = 'Shows list of commands for available games',
-    indent = 4
   )
   async def statcommands(self, ctx):
-    await ctx.send("""```  Games                  Commands                                   Example
+    await ctx.send(
+    """```  Games                  Commands                                   Example
     Apex Legends           $apexstat <username>                       $apexstat StatBot
     CS:GO                  $csgostat <username>                       $csgostat StatBot
     Fortnite               $fortstat <username>                       $fortstat StatBot
     League of Legends      $lolstat <username>**                      $lolstat StatBot
-    Modern Warfare (2019)  $mwstat <username> <game provider>*        $mwstat StatBot psn
+    Modern Warfare (2019)  $mwstat <username> <game platform>*        $mwstat StatBot psn
     Teamfight Tactics      $tftstat <username>**                      $tftstat StatBot
     Valorant               $valstat <username>#<tagline>              $valstat StatBot#1234
-    Vanguard               $vanstat <username> <game provider>*       $vanstat StatBot psn
-    Warzone                $wzstat <username> <game provider>*        $wzstat StatBot#1234 battle.net
+    Vanguard               $vanstat <username> <game platform>*       $vanstat StatBot psn
+    Warzone                $wzstat <username> <game platform>*        $wzstat StatBot#1234 battle.net
     
     *Activision and Battle.net require tags for the username
-    **LoL and TFT currently supports NA region only```""")
+    **LoL and TFT currently supports NA region only```"""
+    )
 
 # Stat Commands Category
 class Stat_Commands(commands.Cog, name = "Stat Commands"):
@@ -92,10 +96,10 @@ class Stat_Commands(commands.Cog, name = "Stat Commands"):
 
   #Modern Warfare (2019) Stat
   @commands.command(brief = 'Modern Warfare (2019)')
-  async def mwstat(self, ctx, username, provider):
+  async def mwstat(self, ctx, username, platform):
     username = username.replace(' ', '%20')
     # Activision
-    if provider.lower() == "activision":
+    if platform.lower() == "activision":
       if '#' in username:
         new_user = username.replace('#', '%23')
         await ctx.send(f'https://cod.tracker.gg/modern-warfare/profile/atvi/{new_user}/mp')
@@ -103,7 +107,7 @@ class Stat_Commands(commands.Cog, name = "Stat Commands"):
         #Send an error message if tagline not found
         await ctx.send('Please provide the tagline (Example: StatBot#1234)')
     # Battle.net
-    elif provider.lower() == "battlenet" or provider.lower() == "battle.net":
+    elif platform.lower() == "battlenet" or platform.lower() == "battle.net":
       if '#' in username:
         new_user = username.replace('#', '%23')
         await ctx.send(f'https://cod.tracker.gg/modern-warfare/profile/battlenet/{new_user}/mp')
@@ -111,14 +115,14 @@ class Stat_Commands(commands.Cog, name = "Stat Commands"):
         #Send an error message if tagline not found
         await ctx.send('Please provide the tagline (Example: StatBot#1234)')
     # Playstation Network
-    elif provider.lower() == "psn" or provider.lower() == "playstation":
+    elif platform.lower() == "psn" or platform.lower() == "playstation":
       await ctx.send(f'https://cod.tracker.gg/modern-warfare/profile/psn/{username}/mp')
     # Xbox Live
-    elif provider.lower() == "xbl" or provider.lower() == "xbox" or provider.lower() == "xboxlive":
+    elif platform.lower() == "xbl" or platform.lower() == "xbox" or platform.lower() == "xboxlive":
       await ctx.send(f'https://cod.tracker.gg/modern-warfare/profile/xbl/{username}/mp')
-    # Incorrect Provider
+    # Incorrect Platform
     else:
-      await ctx.send('Provider not found. Please use: `activision`, `battle.net`, `psn`, or `xbox`.')
+      await ctx.send('Game platform not found. Please use: `activision`, `battle.net`, `psn`, or `xbox`.')
 
   #Teamfight Tactics Stat
   @commands.command(brief = 'Teamfight Tactics')
@@ -152,10 +156,10 @@ class Stat_Commands(commands.Cog, name = "Stat Commands"):
     aliases = ['vanguardstat'],
     brief = 'Vanguard'
   )
-  async def vanstat(self, ctx, username, provider):
+  async def vanstat(self, ctx, username, platform):
     username = username.replace(' ', '%20')
     # Activision
-    if provider.lower() == "activision":
+    if platform.lower() == "activision":
       if '#' in username:
         new_user = username.replace('#', '%23')
         await ctx.send(f'https://cod.tracker.gg/vanguard/profile/atvi/{new_user}/overview')
@@ -163,7 +167,7 @@ class Stat_Commands(commands.Cog, name = "Stat Commands"):
         #Send an error message if tagline not found
         await ctx.send('Please provide the tagline (Example: StatBot#1234)')
     # Battle.net
-    elif provider.lower() == "battlenet" or provider.lower() == "battle.net":
+    elif platform.lower() == "battlenet" or platform.lower() == "battle.net":
       if '#' in username:
         new_user = username.replace('#', '%23')
         await ctx.send(f'https://cod.tracker.gg/vanguard/profile/battlenet/{new_user}/overview')
@@ -171,24 +175,24 @@ class Stat_Commands(commands.Cog, name = "Stat Commands"):
         #Send an error message if tagline not found
         await ctx.send('Please provide the tagline (Example: StatBot#1234)')
     # Playstation
-    elif provider.lower() == "psn" or provider.lower() == "playstation":
+    elif platform.lower() == "psn" or platform.lower() == "playstation":
       await ctx.send(f'https://cod.tracker.gg/vanguard/profile/psn/{username}/overview')
     # Xbox Live
-    elif provider.lower() == "xbl" or provider.lower() == "xbox" or provider.lower() == "xboxlive":
+    elif platform.lower() == "xbl" or platform.lower() == "xbox" or platform.lower() == "xboxlive":
       await ctx.send(f'https://cod.tracker.gg/vanguard/profile/xbl/{username}/overview')
-    # Incorrect Provider
+    # Incorrect Platform
     else:
-      await ctx.send('Provider not found. Please use: `activision`, `battle.net`, `psn`, or `xbox`.')
+      await ctx.send('Game platform not found. Please use: `activision`, `battle.net`, `psn`, or `xbox`.')
 
   #Warzone Stat
   @commands.command(
     aliases = ['warzonestat'],
     brief = 'Warzone'
   )
-  async def wzstat(self, ctx, username, provider):
+  async def wzstat(self, ctx, username, platform):
     username = username.replace(' ', '%20')
     # Activision
-    if provider.lower() == "activision":
+    if platform.lower() == "activision":
       if '#' in username:
         new_user = username.replace('#', '%23')
         await ctx.send(f'https://cod.tracker.gg/warzone/profile/atvi/{new_user}/overview')
@@ -196,7 +200,7 @@ class Stat_Commands(commands.Cog, name = "Stat Commands"):
         #Send an error message if tagline not found
         await ctx.send('Please provide the tagline (Example: StatBot#1234)')
     # Battle.net
-    elif provider.lower() == "battlenet" or provider.lower() == "battle.net":
+    elif platform.lower() == "battlenet" or platform.lower() == "battle.net":
       if '#' in username:
         new_user = username.replace('#', '%23')
         await ctx.send(f'https://cod.tracker.gg/warzone/profile/battlenet/{new_user}/overview')
@@ -204,13 +208,14 @@ class Stat_Commands(commands.Cog, name = "Stat Commands"):
         #Send an error message if tagline not found
         await ctx.send('Please provide the tagline (Example: StatBot#1234)')
     # Playstation
-    elif provider.lower() == "psn" or provider.lower() == "playstation":
+    elif platform.lower() == "psn" or platform.lower() == "playstation":
       await ctx.send(f'https://cod.tracker.gg/warzone/profile/psn/{username}/overview')
     # Xbox Live
-    elif provider.lower() == "xbl" or provider.lower() == "xbox" or provider.lower() == "xboxlive":
+    elif platform.lower() == "xbl" or platform.lower() == "xbox" or platform.lower() == "xboxlive":
       await ctx.send(f'https://cod.tracker.gg/warzone/profile/xbl/{username}/overview')
+    # Incorrect Platform
     else:
-      await ctx.send('Provider not found. Please use: `activision`, `battle.net`, `psn`, or `xbox`.')
+      await ctx.send('Game platform not found. Please use: `activision`, `battlenet`, `psn`, or `xbox`.')
 
 # Add the Categories to the bot
 bot.add_cog(Help_Commands())
