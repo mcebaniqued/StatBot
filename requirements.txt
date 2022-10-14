@@ -1,2 +1,2 @@
-discord.py
+discord.py==1.7.3 #new version is 2.0.1
 riotwatcher==3.2.3
