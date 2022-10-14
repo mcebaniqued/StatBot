@@ -1,2 +1,2 @@
 discord.py
-riotwatcher.py
+riotwatcher==3.2.3
