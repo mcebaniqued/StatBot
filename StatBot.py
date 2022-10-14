@@ -1,12 +1,16 @@
 import discord
 import os
 from discord.ext import commands
+from riotwatcher import LolWatcher, ApiError
 
-TOKEN = os.getenv("DISCORD_TOKEN")
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+RIOT_TOKEN = os.getenv("RIOT_API_KEY")
+watcher = LolWatcher(RIOT_TOKEN)
 
 bot = commands.Bot(
   case_insensitive = True,
   command_prefix = '$',
+  strip_after_prefix = True
 )
 
 ##########
@@ -23,8 +27,8 @@ async def on_ready():
 async def on_command_error(ctx, error):
   if isinstance(error, commands.MissingRequiredArgument):
     await ctx.send(
-    f'''Correct usage: {ctx.prefix}{ctx.command.name} {ctx.command.signature}
-    For more help, type `$help {ctx.command.name}` or `$commandlist`'''
+      f'''Correct usage: {ctx.prefix}{ctx.command.name} {ctx.command.signature}
+      For more help, type `$help {ctx.command.name}` or `$commandlist`'''
     )
   #await bot.process_commands(message)
 
@@ -36,6 +40,16 @@ async def on_command_error(ctx, error):
 @bot.command(hidden = True)
 async def test(ctx):
   await ctx.send('Hello!')
+
+@bot.command(hidden = True)
+async def embed(ctx):
+  embedMsg = discord.Embed(
+    title = "Title",
+    description = 'Description',
+    color = '#FFFFFF'
+  )
+  embedMsg.set_thumbnail(url='')
+  await ctx.send(embedMsg)
 
 # Help Commands Category
 class Help_Commands(commands.Cog, name = 'Help Commands'):
@@ -70,6 +84,7 @@ class Stat_Commands(commands.Cog, name = "Stat Commands"):
     username = username.replace(' ', '%20')
     await ctx.send(f'https://apex.tracker.gg/apex/profile/origin/{username}/overview')
 
+
   #CS:GO Stat
   @commands.command(brief = 'Counter Strike: Global Offensive')
   async def csgostat(self, ctx, *, username):
@@ -91,8 +106,65 @@ class Stat_Commands(commands.Cog, name = "Stat Commands"):
     brief = 'League of Legends'
   )
   async def lolstat(self, ctx, *, username):
-    username = username.replace(' ', '%20')
-    await ctx.send(f'https://na.op.gg/summoners/na/{username}')
+    # username = username.replace(' ', '%20')
+    # await ctx.send(f'https://na.op.gg/summoners/na/{username}')
+    platformRoutingValue = "NA1"    # Requested Region
+    summonerName = username         # Requested Summoner Name
+
+    try:
+      summoner_id = watcher.summoner.by_name(platformRoutingValue, summonerName)      # Grab encrypted summoner id
+    except ApiError as err:
+      if err.response.status_code == 404:
+        await ctx.send('Summoner name not found')
+      elif err.reponse.status_code == 429:
+        await ctx.send(f"There's an error on our end. Please try again in {err.headers['Retry-After']} seconds.")
+      else:
+        raise
+    else:
+      summoner = watcher.league.by_summoner(platformRoutingValue, summoner_id['id'])  # Grab all necessary data
+      summonerLevel = summoner_id['summonerLevel']                              # Level
+      # Solo/Duo Queue
+      summonerSDRank = summoner[0]['tier'].title() + " " + summoner[0]['rank']              # Rank
+      summonerSDWins = summoner[0]['wins']                                                  # Number of Wins
+      summonerSDLosses = summoner[0]['losses']                                              # Number of Losses
+      summonerSDWinrate = int(summonerSDWins/(summonerSDWins + summonerSDLosses) * 100)
+
+      # Flex Queue
+      summonerFRank = summoner[1]['tier'].title() + " " + summoner[0]['rank']              # Rank
+      summonerFWins = summoner[1]['wins']                                                  # Number of Wins
+      summonerFLosses = summoner[1]['losses']                                              # Number of Losses
+      summonerFWinrate = int(summonerFWins/(summonerFWins + summonerFLosses) * 100)
+
+      embed = discord.Embed(
+        title = username
+      )
+      embed.add_field(
+        name = "Level",
+        value = summonerLevel,
+        inline = False
+      )
+      embed.add_field(
+        name = "Solo/Duo Queue",
+        value = summonerSDRank,
+        inline = True
+      )
+      embed.add_field(
+        name = "Win/Loss",
+        value = f"{summonerSDWins}/{summonerSDLosses} ({summonerSDWinrate}%)",
+        inline = True
+      )
+      embed.add_field(
+        name = "Flex Queue",
+        value = summonerFRank,
+        inline = True
+      )
+      embed.add_field(
+        name = "Win/Loss",
+        value = f"{summonerFWins}/{summonerFLosses} ({summonerFWinrate}%)",
+        inline = True
+      )
+
+      await ctx.send(embed=embed)
 
   #Modern Warfare (2019) Stat
   @commands.command(brief = 'Modern Warfare (2019)')
@@ -225,7 +297,7 @@ bot.add_cog(Stat_Commands())
 # Run the bot #
 ###############
 
-bot.run(TOKEN)
+bot.run(DISCORD_TOKEN)
 
 #TODO: Take account space in username. username argument only takes nonspace strings (MW, VANGUARD, WARZONE)
 #TODO: lolstat and tftstat needs region argument
