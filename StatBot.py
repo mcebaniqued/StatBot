@@ -106,65 +106,66 @@ class Stat_Commands(commands.Cog, name = "Stat Commands"):
     brief = 'League of Legends'
   )
   async def lolstat(self, ctx, *, username):
-    # username = username.replace(' ', '%20')
+    #username = username.replace(' ', '%20')
     # await ctx.send(f'https://na.op.gg/summoners/na/{username}')
+
     platformRoutingValue = "NA1"    # Requested Region
     summonerName = username         # Requested Summoner Name
 
-    try:
-      summoner_id = watcher.summoner.by_name(platformRoutingValue, summonerName)      # Grab encrypted summoner id
-    except ApiError as err:
-      if err.response.status_code == 404:
-        await ctx.send('Summoner name not found')
-      elif err.reponse.status_code == 429:
-        await ctx.send(f"There's an error on our end. Please try again in {err.headers['Retry-After']} seconds.")
-      else:
-        raise
-    else:
-      summoner = watcher.league.by_summoner(platformRoutingValue, summoner_id['id'])  # Grab all necessary data
-      summonerLevel = summoner_id['summonerLevel']                              # Level
-      # Solo/Duo Queue
-      summonerSDRank = summoner[0]['tier'].title() + " " + summoner[0]['rank']              # Rank
-      summonerSDWins = summoner[0]['wins']                                                  # Number of Wins
-      summonerSDLosses = summoner[0]['losses']                                              # Number of Losses
-      summonerSDWinrate = int(summonerSDWins/(summonerSDWins + summonerSDLosses) * 100)
+    # try:
+    summoner_id = watcher.summoner.by_name(platformRoutingValue, summonerName)      # Grab encrypted summoner id
+    # except ApiError as err:
+    #   if err.response.status_code == 404:
+    #     await ctx.send('Summoner name not found')
+    #   elif err.reponse.status_code == 429:
+    #     await ctx.send(f"There's an error on our end. Please try again in {err.headers['Retry-After']} seconds.")
+    #   else:
+    #     raise
+    # else:
+    summoner = watcher.league.by_summoner(platformRoutingValue, summoner_id['id'])  # Grab all necessary data
+    summonerLevel = summoner_id['summonerLevel']                              # Level
+    # Solo/Duo Queue
+    summonerSDRank = summoner[0]['tier'].title() + " " + summoner[0]['rank']              # Rank
+    summonerSDWins = summoner[0]['wins']                                                  # Number of Wins
+    summonerSDLosses = summoner[0]['losses']                                              # Number of Losses
+    summonerSDWinrate = int(summonerSDWins/(summonerSDWins + summonerSDLosses) * 100)
 
-      # Flex Queue
-      summonerFRank = summoner[1]['tier'].title() + " " + summoner[0]['rank']              # Rank
-      summonerFWins = summoner[1]['wins']                                                  # Number of Wins
-      summonerFLosses = summoner[1]['losses']                                              # Number of Losses
-      summonerFWinrate = int(summonerFWins/(summonerFWins + summonerFLosses) * 100)
+    # Flex Queue
+    summonerFRank = summoner[1]['tier'].title() + " " + summoner[0]['rank']              # Rank
+    summonerFWins = summoner[1]['wins']                                                  # Number of Wins
+    summonerFLosses = summoner[1]['losses']                                              # Number of Losses
+    summonerFWinrate = int(summonerFWins/(summonerFWins + summonerFLosses) * 100)
 
-      embed = discord.Embed(
-        title = username
-      )
-      embed.add_field(
-        name = "Level",
-        value = summonerLevel,
-        inline = False
-      )
-      embed.add_field(
-        name = "Solo/Duo Queue",
-        value = summonerSDRank,
-        inline = True
-      )
-      embed.add_field(
-        name = "Win/Loss",
-        value = f"{summonerSDWins}/{summonerSDLosses} ({summonerSDWinrate}%)",
-        inline = True
-      )
-      embed.add_field(
-        name = "Flex Queue",
-        value = summonerFRank,
-        inline = True
-      )
-      embed.add_field(
-        name = "Win/Loss",
-        value = f"{summonerFWins}/{summonerFLosses} ({summonerFWinrate}%)",
-        inline = True
-      )
+    embed = discord.Embed(
+      title = username
+    )
+    embed.add_field(
+      name = "Level",
+      value = summonerLevel,
+      inline = False
+    )
+    embed.add_field(
+      name = "Solo/Duo Queue",
+      value = summonerSDRank,
+      inline = True
+    )
+    embed.add_field(
+      name = "Win/Loss",
+      value = f"{summonerSDWins}/{summonerSDLosses} ({summonerSDWinrate}%)",
+      inline = True
+    )
+    embed.add_field(
+      name = "Flex Queue",
+      value = summonerFRank,
+      inline = True
+    )
+    embed.add_field(
+      name = "Win/Loss",
+      value = f"{summonerFWins}/{summonerFLosses} ({summonerFWinrate}%)",
+      inline = True
+    )
 
-      await ctx.send(embed=embed)
+    await ctx.send(embed=embed)
 
   #Modern Warfare (2019) Stat
   @commands.command(brief = 'Modern Warfare (2019)')
