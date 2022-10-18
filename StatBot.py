@@ -111,7 +111,11 @@ class Stat_Commands(commands.Cog, name = "Stat Commands"):
     brief = 'League of Legends'
   )
   async def lolstat(self, ctx, *args):
-    version = requests.get('https://ddragon.leagueoflegends.com/api/versions.json').json()[0] #Get latest version
+    #Get latest version
+    lastest_version = requests.get('https://ddragon.leagueoflegends.com/api/versions.json').json()[0]
+
+    # Parse in the arguments
+    username = ''
 
     regions = {
       'BR':   'BR1',
@@ -126,165 +130,296 @@ class Stat_Commands(commands.Cog, name = "Stat Commands"):
       'TR':   'TR1',
       'RU':   'RU1',
     }
-
-    username = ''
+    
     try:
-      platformRoutingValue = regions[args[-1].upper()]
+      summoner_region = regions[args[-1].upper()]
     except:
-      platformRoutingValue = "NA1"
+      #If region is not found within the region dict, default to "NA1"
+      summoner_region = "NA1"
 
+      #Parse in the username
       for i in range(len(args)):
         username += args[i]
         if i < len(args)-1:
           username += " "
     else:
-      platformRoutingValue = regions[args[-1].upper()]    # Requested Region
-      
+      #Parse in the username
       for i in range(len(args)-1):
         username += args[i]
         if i < len(args)-2:
           username += " "
 
+    #Get data using Riot API
     try:
-      summoner_id = watcher.summoner.by_name(platformRoutingValue, username)      # Grab summoner object based on summoner name
+      summoner_id = watcher.summoner.by_name(summoner_region, username)      # Grab summoner object based on username
       # print(summoner_id)
+    # Error handling
     except ApiError as err:
       print(f'Error Code: {err.response.status_code}')
       if err.response.status_code == 404:
         print('This summoner does not exist')
         embed = discord.Embed(title = "This summoner does not exist")
         await ctx.send(embed=embed)
+        return
       elif err.reponse.status_code == 429:
         embed = discord.Embed(title = f"There's an error on our end. Please try again in {err.headers['Retry-After']} seconds.")
         await ctx.send(embed=embed)
-      else:
-        raise
+        return
     else:
-      summoner = watcher.league.by_summoner(platformRoutingValue, summoner_id['id'])  # Grab all necessary data
-      # print(summoner)
-      if not summoner:
-        errEmbed = discord.Embed(title = "This summoner does not exist")
-        await ctx.send(embed=errEmbed)
+      summonerName = summoner_id['name']
+      summonerLevel = summoner_id['summonerLevel']   
+      profileIconId = summoner_id['profileIconId']
+
+      # Initialize Embed
+      embed = discord.Embed(
+        title = summonerName
+      )
+      embed.set_thumbnail(url=f"http://ddragon.leagueoflegends.com/cdn/{lastest_version}/img/profileicon/{profileIconId}.png")
+      embed.add_field(
+        name = "Level",
+        value = summonerLevel,
+        inline = False
+      )
+
+      ###########
+      # RANKED  #
+      ###########
+      
+      # Check for their ranked data
+      try:
+        summoner_ranked = watcher.league.by_summoner(summoner_region, summoner_id['id'])
+        #print(summoner_ranked)
+      except ApiError as err:
+        print(f'Error Code: {err.response.status_code}')
+        if err.response.status_code == 404:
+          print('This summoner does not exist')
+          embed = discord.Embed(title = "This summoner does not exist")
+          await ctx.send(embed=embed)
+          return
+        elif err.reponse.status_code == 429:
+          embed = discord.Embed(title = f"There's an error on our end. Please try again in {err.headers['Retry-After']} seconds.")
+          await ctx.send(embed=embed)
+          return
       else:
-        summonerName = summoner_id['name']
-        summonerLevel = summoner_id['summonerLevel']                                    # Level
+        # Summoner plays ranked
+        if summoner_ranked:
+          # Solo/Duo and Flex
+          if len(summoner_ranked) == 1:
+            if summoner_ranked[0]['queueType'] == "RANKED_SOLO_5x5":
+              summonerSDRank = summoner_ranked[0]['tier'].title() + " " + summoner_ranked[0]['rank']              # Rank
+              summonerSDLeaguePoints = summoner_ranked[0]['leaguePoints']                                  # LP
+              summonerSDWins = summoner_ranked[0]['wins']                                                  # Number of Wins
+              summonerSDLosses = summoner_ranked[0]['losses']                                              # Number of Losses
+              summonerSDWinrate = int(summonerSDWins/(summonerSDWins + summonerSDLosses) * 100)
 
-        # Solo/Duo and Flex
-        if len(summoner) == 1:
-          if summoner[0]['queueType'] == "RANKED_SOLO_5x5":
-            summonerSDRank = summoner[0]['tier'].title() + " " + summoner[0]['rank']              # Rank
-            summonerSDLeaguePoints = summoner[0]['leaguePoints']                                  # LP
-            summonerSDWins = summoner[0]['wins']                                                  # Number of Wins
-            summonerSDLosses = summoner[0]['losses']                                              # Number of Losses
-            summonerSDWinrate = int(summonerSDWins/(summonerSDWins + summonerSDLosses) * 100)
+              summonerFRank = 'Unranked'
+              summonerFLeaguePoints = 0
+              summonerFWins = 0                                                                     # Number of Wins
+              summonerFLosses = 0                                                                   # Number of Losses
+              summonerFWinrate = 0
 
-            summonerFRank = 'Unranked'
-            summonerFLeaguePoints = 0
-            summonerFWins = 0                                                                     # Number of Wins
-            summonerFLosses = 0                                                                   # Number of Losses
-            summonerFWinrate = 0
+            elif summoner_ranked[0]['queueType'] == "RANKED_FLEX_SR":
+              summonerSDRank = 'Unranked'                                                           # Rank
+              summonerSDLeaguePoints = 0
+              summonerSDWins = 0                                                                    # Number of Wins
+              summonerSDLosses = 0                                                                  # Number of Losses
+              summonerSDWinrate = 0
 
-          elif summoner[0]['queueType'] == "RANKED_FLEX_SR":
-            summonerSDRank = 'Unranked'                                                           # Rank
-            summonerSDLeaguePoints = 0
-            summonerSDWins = 0                                                                    # Number of Wins
-            summonerSDLosses = 0                                                                  # Number of Losses
-            summonerSDWinrate = 0
+              summonerFRank = summoner_ranked[0]['tier'].title() + " " + summoner_ranked[0]['rank']               # Rank
+              summonerFLeaguePoints = summoner_ranked[0]['leaguePoints']                                   # LP
+              summonerFWins = summoner_ranked[0]['wins']                                                   # Number of Wins
+              summonerFLosses = summoner_ranked[0]['losses']                                               # Number of Losses
+              summonerFWinrate = int(summonerFWins/(summonerFWins + summonerFLosses) * 100)
+          elif len(summoner_ranked) == 2:
+            if summoner_ranked[0]['queueType'] == "RANKED_SOLO_5x5":
+              summonerSDRank = summoner_ranked[0]['tier'].title() + " " + summoner_ranked[0]['rank']              # Rank
+              summonerSDLeaguePoints = summoner_ranked[0]['leaguePoints']                                  # LP
+              summonerSDWins = summoner_ranked[0]['wins']                                                  # Number of Wins
+              summonerSDLosses = summoner_ranked[0]['losses']                                              # Number of Losses
+              summonerSDWinrate = int(summonerSDWins/(summonerSDWins + summonerSDLosses) * 100)
 
-            summonerFRank = summoner[0]['tier'].title() + " " + summoner[0]['rank']               # Rank
-            summonerFLeaguePoints = summoner[0]['leaguePoints']                                   # LP
-            summonerFWins = summoner[0]['wins']                                                   # Number of Wins
-            summonerFLosses = summoner[0]['losses']                                               # Number of Losses
-            summonerFWinrate = int(summonerFWins/(summonerFWins + summonerFLosses) * 100)
+              summonerFRank = summoner_ranked[1]['tier'].title() + " " + summoner_ranked[1]['rank']
+              summonerFLeaguePoints = summoner_ranked[1]['leaguePoints']                                   # LP
+              summonerFWins = summoner_ranked[1]['wins']                                                   # Number of Wins
+              summonerFLosses = summoner_ranked[1]['losses']                                               # Number of Losses
+              summonerFWinrate = int(summonerFWins/(summonerFWins + summonerFLosses) * 100)
 
-        elif len(summoner) == 2:
-          if summoner[0]['queueType'] == "RANKED_SOLO_5x5":
-            summonerSDRank = summoner[0]['tier'].title() + " " + summoner[0]['rank']              # Rank
-            summonerSDLeaguePoints = summoner[0]['leaguePoints']                                  # LP
-            summonerSDWins = summoner[0]['wins']                                                  # Number of Wins
-            summonerSDLosses = summoner[0]['losses']                                              # Number of Losses
-            summonerSDWinrate = int(summonerSDWins/(summonerSDWins + summonerSDLosses) * 100)
+            else:
+              summonerSDRank = summoner_ranked[1]['tier'].title() + " " + summoner_ranked[0]['rank']              # Rank
+              summonerSDLeaguePoints = summoner_ranked[1]['leaguePoints']                                  # LP
+              summonerSDWins = summoner_ranked[1]['wins']                                                  # Number of Wins
+              summonerSDLosses = summoner_ranked[1]['losses']                                              # Number of Losses
+              summonerSDWinrate = int(summonerSDWins/(summonerSDWins + summonerSDLosses) * 100)
 
-            summonerFRank = summoner[1]['tier'].title() + " " + summoner[1]['rank']
-            summonerFLeaguePoints = summoner[1]['leaguePoints']                                   # LP
-            summonerFWins = summoner[1]['wins']                                                   # Number of Wins
-            summonerFLosses = summoner[1]['losses']                                               # Number of Losses
-            summonerFWinrate = int(summonerFWins/(summonerFWins + summonerFLosses) * 100)
-
+              summonerFRank = summoner_ranked[0]['tier'].title() + " " + summoner_ranked[0]['rank']               # Rank
+              summonerFLeaguePoints = summoner_ranked[0]['leaguePoints']                                   # LP
+              summonerFWins = summoner_ranked[0]['wins']                                                   # Number of Wins
+              summonerFLosses = summoner_ranked[0]['losses']                                               # Number of Losses
+              summonerFWinrate = int(summonerFWins/(summonerFWins + summonerFLosses) * 100)
+          
+          # Solo/Duo Field
+          if(summonerSDRank != 'Unranked'):
+            embed.add_field(
+              name = "Ranked Solo/Duo",
+              value = f'{summonerSDRank} ({summonerSDLeaguePoints} LP)',
+              inline = True
+            )
+            # Empty Field
+            embed.add_field(
+              name = '\u200b', 
+              value = '\u200b',
+              inline = True
+            )
+            embed.add_field(
+              name = "Win/Loss",
+              value = f"{summonerSDWins}/{summonerSDLosses} ({summonerSDWinrate}%)",
+              inline = True
+            )
           else:
-            summonerSDRank = summoner[1]['tier'].title() + " " + summoner[0]['rank']              # Rank
-            summonerSDLeaguePoints = summoner[1]['leaguePoints']                                  # LP
-            summonerSDWins = summoner[1]['wins']                                                  # Number of Wins
-            summonerSDLosses = summoner[1]['losses']                                              # Number of Losses
-            summonerSDWinrate = int(summonerSDWins/(summonerSDWins + summonerSDLosses) * 100)
+            embed.add_field(
+              name = "Ranked Solo/Duo",
+              value = 'Unranked',
+              inline = True
+            )
+            # Empty Fields
+            embed.add_field(
+              name = '\u200b', 
+              value = '\u200b',
+              inline = True
+            )
+            embed.add_field(
+              name = '\u200b', 
+              value = '\u200b',
+              inline = True
+            )
+          # Flex Field
+          if(summonerFRank != 'Unranked'):
+            embed.add_field(
+              name = "Ranked Flex",
+              value = f'{summonerFRank} ({summonerFLeaguePoints} LP)',
+              inline = True
+            )
+            # Empty Field
+            embed.add_field(
+              name = '\u200b', 
+              value = '\u200b',
+              inline = True
+            )
+            embed.add_field(
+              name = "Win/Loss",
+              value = f"{summonerFWins}/{summonerFLosses} ({summonerFWinrate}%)",
+              inline = True
+            )
+          else:
+            embed.add_field(
+              name = "Ranked Flex",
+              value = 'Uranked',
+              inline = True
+            )
+            # Empty Fields
+            embed.add_field(
+              name = '\u200b', 
+              value = '\u200b',
+              inline = True
+            )
+            embed.add_field(
+              name = '\u200b', 
+              value = '\u200b',
+              inline = True
+            )
+        
+        # Summoner does not play ranked
+        else:
+          embed.add_field(
+            name = "Ranked Solo/Duo",
+            value = 'Unranked',
+            inline = True
+          )
+          # Empty Fields
+          embed.add_field(
+            name = '\u200b', 
+            value = '\u200b',
+            inline = True
+          )
+          embed.add_field(
+            name = '\u200b', 
+            value = '\u200b',
+            inline = True
+          )
+          embed.add_field(
+            name = "Ranked Flex",
+            value = 'Uranked',
+            inline = True
+          )
+          # Empty Fields
+          embed.add_field(
+            name = '\u200b', 
+            value = '\u200b',
+            inline = True
+          )
+          embed.add_field(
+            name = '\u200b', 
+            value = '\u200b',
+            inline = True
+          )
 
-            summonerFRank = summoner[0]['tier'].title() + " " + summoner[0]['rank']               # Rank
-            summonerFLeaguePoints = summoner[0]['leaguePoints']                                   # LP
-            summonerFWins = summoner[0]['wins']                                                   # Number of Wins
-            summonerFLosses = summoner[0]['losses']                                               # Number of Losses
-            summonerFWinrate = int(summonerFWins/(summonerFWins + summonerFLosses) * 100)
+      ##############
+      # MASTERIES  #
+      ##############
 
-        #TODO: Champion Masteries
-        # masteries = watcher.champion_mastery.by_summoner(platformRoutingValue, summoner_id['id'])
-        # for i in range(5):
-        #   print(masteries[i])
+      # Top 3 Champions
+      masteries = watcher.champion_mastery.by_summoner(summoner_region, summoner_id['id'])
+      #print(masteries)
+      list = requests.get(f'https://ddragon.leagueoflegends.com/cdn/{lastest_version}/data/en_US/champion.json').json()["data"]
+      
+      topChamps = []
+      mastery_size = 3
+      if(len(masteries) < 3):
+        mastery_size = len(masteries)
 
-        embed = discord.Embed(
-          title = summonerName
-        )
-        embed.set_thumbnail(url=f"http://ddragon.leagueoflegends.com/cdn/{version}/img/profileicon/{summoner_id['profileIconId']}.png")
-        embed.add_field(
-          name = "Level",
-          value = summonerLevel,
-          inline = False
-        )
-        embed.add_field(
-          name = "Ranked Solo/Duo",
-          value = f'{summonerSDRank} ({summonerSDLeaguePoints} LP)',
-          inline = True
-        )
-        embed.add_field(
-          name = '\u200b', 
-          value = '\u200b',
-          inline = True
-        )
-        embed.add_field(
-          name = "Win/Loss",
-          value = f"{summonerSDWins}/{summonerSDLosses} ({summonerSDWinrate}%)",
-          inline = True
-        )
-        embed.add_field(
-          name = "Ranked Flex",
-          value = f'{summonerFRank} ({summonerFLeaguePoints} LP)',
-          inline = True
-        )
-        embed.add_field(
-          name = '\u200b', 
-          value = '\u200b',
-          inline = True
-        )
-        embed.add_field(
-          name = "Win/Loss",
-          value = f"{summonerFWins}/{summonerFLosses} ({summonerFWinrate}%)",
-          inline = True
-        )
-        #TODO: add Top 5 Champions
-        # embed.add_field(
-        #   name = "Top Champions",
-        #   value = f"",
-        #   inline = False
-        # )
+      for i in range(mastery_size):
+        for j in list:
+          if int(list[j]["key"]) == int(masteries[i]["championId"]):
+            topChamps.append(list[j]["name"])
+            break
+      #print(topChamps)
 
-        #TODO: add footer that contains author and timestamp
-        # print(ctx.author.display_name)
-        # time = datetime.datetime.now()
-        # embed.timestamp = time.strftime("%m/%d/%Y, %H:%M:%S")
-        # print(time)
-        # # embed.set_footer(
-        #   text=f'{ctx.author.display_name} | {ctx.datetime.now()}'
-        # )
+      champStr = ""
+      for i in range(len(topChamps)):
+        champStr += f"{i+1}. {topChamps[i]}"
+        if i != len(topChamps):
+          champStr += "\n"
+      #print(champStr)
+      
+      pointStr = ""
+      for i in range(len(topChamps)):
+        pointStr += f"{'{:,}'.format(masteries[i]['championPoints'])} pts"
+        if i != len(topChamps):
+          pointStr += "\n"
+      #print(pointStr)
+      
+      embed.add_field(
+        name = "Most Played Champions",
+        value = champStr,
+        inline = True
+      )
+      embed.add_field(
+        name = '\u200b', 
+        value = pointStr,
+        inline = True
+      )
+        
 
-        await ctx.send(embed=embed)
+      #TODO: add footer that contains author and timestamp
+      # print(ctx.author.display_name)
+      # time = datetime.datetime.now()
+      # embed.timestamp = time.strftime("%m/%d/%Y, %H:%M:%S")
+      # print(time)
+      # # embed.set_footer(
+      #   text=f'{ctx.author.display_name} | {ctx.datetime.now()}'
+      # )
+
+      await ctx.send(embed=embed)
 
   #Modern Warfare (2019) Stat
   @commands.command(brief = 'Modern Warfare (2019)')
