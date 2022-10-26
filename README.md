@@ -1,5 +1,5 @@
 # StatBot
-## Discord bot that sends a link of a stat tracker site of specific games.
+Discord bot that sends a link of a stat tracker site of specific games.
 
 #### Helpful Commands:
 `$help` - lists out available commands  
