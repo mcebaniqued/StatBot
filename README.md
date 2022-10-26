@@ -15,3 +15,8 @@ Teamfight Tactics (NA region only)
 Valorant  
 Vanguard  
 Warzone  
+
+Update Oct 13, 2022:
+Rather than sending external link to well known player stat websites, I am working on using APIs to gather data and send it as an embedded message on Discord. I'm currently working on Riot API using RiotWatcher and will be using it for other Riot games (TFT, Val, LoR). Once that's knocked out, I'll work on other games.
+
+Also, Heroku is getting rid of their free Dynos that was letting me host StatBot for free so I'm gonna have to pull StatBot out until I feel that it's polished and I'll find another site to host it.
